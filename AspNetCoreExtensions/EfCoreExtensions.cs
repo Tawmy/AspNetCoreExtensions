@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace AspNetCoreExtensions;
 
-public static class ServiceProviderExtensions
+public static class EfCoreExtensions
 {
     public static async Task MigrateDatabaseAsync<T>(this IServiceProvider serviceProvider) where T : DbContext
     {
