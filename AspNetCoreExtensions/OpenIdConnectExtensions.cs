@@ -11,15 +11,25 @@ namespace AspNetCoreExtensions;
 
 public static class OpenIdConnectExtensions
 {
-    public static AuthenticationBuilder AddKeycloakAuthentication(this IServiceCollection services,
-        KeycloakAuthenticationConfiguration config, Action<KeycloakAuthenticationOptions> configureOptions)
+    /// <summary>
+    ///     Add Keycloak based authentication. Realm and client roles are mapped.
+    /// </summary>
+    /// <param name="services">Service collection.</param>
+    /// <param name="idp">Identity Provider configuration. Load this safely.</param>
+    /// <param name="configureOptions">Optional config and overrides for authentication configuration.</param>
+    /// <param name="configureOpenIdConnect">ASP.NET Core OpenIdConnectOptions that go beyond basic configuration.</param>
+    public static void AddKeycloakAuthentication(this IServiceCollection services,
+        KeycloakAuthenticationConfiguration idp, Action<KeycloakAuthenticationOptions>? configureOptions = null,
+        Action<OpenIdConnectOptions>? configureOpenIdConnect = null)
     {
         var options = new KeycloakAuthenticationOptions();
-        configureOptions(options);
+        configureOptions?.Invoke(options);
 
-        return services.AddAuthentication(options.AuthenticationScheme)
+        services.AddAuthentication(options.AuthenticationScheme)
             .AddOpenIdConnect(options.AuthenticationScheme, x =>
             {
+                configureOpenIdConnect?.Invoke(x);
+
                 // use cookie authentication scheme to persist user credentials across requests
                 x.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
@@ -27,12 +37,12 @@ public static class OpenIdConnectExtensions
                 x.Scope.Add(OpenIdConnectScope.OpenIdProfile);
 
                 // using authority automatically sets endpoints like auth, token, and userinfo
-                x.Authority = config.OidcAuthority;
+                x.Authority = idp.OidcAuthority;
 
                 // use client id and secret as backend can save secret safely.
                 // pkce is enabled by default (force in keycloak client for double security)
-                x.ClientId = config.OidcClientId;
-                x.ClientSecret = config.OidcClientSecret;
+                x.ClientId = idp.OidcClientId;
+                x.ClientSecret = idp.OidcClientSecret;
 
                 // Use code for auth code flow, avoid implicit flow (less secure, will be omitted from OAuth 2.1 spec)
                 x.ResponseType = OpenIdConnectResponseType.Code;
@@ -72,6 +82,12 @@ public static class OpenIdConnectExtensions
     /// <summary>
     ///     Add OAuth refresh token support
     /// </summary>
+    /// <param name="services">Service collection.</param>
+    /// <param name="cookieScheme">
+    ///     Name of the cookie authentication scheme, usually
+    ///     <see cref="CookieAuthenticationDefaults.AuthenticationScheme" />.
+    /// </param>
+    /// <param name="oidcScheme">Scheme name for OpenID Connect authentication.</param>
     public static void ConfigureCookieOidcRefresh(this IServiceCollection services, string cookieScheme,
         string oidcScheme)
     {
