@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -20,6 +21,9 @@ internal class JwtFactory(SecurityKey securityKey, X509Certificate2 cert, string
 
     private SecurityTokenDescriptor CreateSecurityTokenDescriptor(SigningCredentials signingCredentials)
     {
+        var certHash = SHA256.HashData(cert.RawData);
+        var x5T256 = Base64Url.EncodeToString(certHash);
+
         return new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity([
@@ -33,7 +37,7 @@ internal class JwtFactory(SecurityKey securityKey, X509Certificate2 cert, string
             AdditionalHeaderClaims = new Dictionary<string, object>
             {
                 {
-                    "kid", Convert.ToHexString(SHA256.HashData(cert.RawData))
+                    "kid", x5T256
                 }
             },
 

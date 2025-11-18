@@ -31,18 +31,21 @@ internal class JwksProvider(string certificateUri)
             throw new InvalidOperationException("Invalid ECDSA parameters: X or Y coordinate is null.");
         }
 
+        var certHash = SHA256.HashData(cert.RawData);
+        var x5T256 = Base64Url.EncodeToString(certHash);
+
         return new JwksResponse
         {
             Keys =
             [
                 new JwksKey
                 {
-                    Kid = Convert.ToHexString(SHA256.HashData(cert.RawData)),
+                    Kid = x5T256,
                     Kty = "EC",
                     Alg = GetAlgorithm(publicKey.KeySize),
                     Use = "sig",
-                    X5C = [Base64Url.EncodeToString(cert.Export(X509ContentType.Cert))],
-                    X5Ts256 = Base64Url.EncodeToString(SHA256.HashData(cert.RawData)),
+                    X5C = [Convert.ToBase64String(cert.Export(X509ContentType.Cert))],
+                    X5Ts256 = x5T256,
                     Crv = GetCurveName(ecParams.Curve.Oid.Value, publicKey.KeySize),
                     X = Base64Url.EncodeToString(ecParams.Q.X),
                     Y = Base64Url.EncodeToString(ecParams.Q.Y)
