@@ -11,6 +11,7 @@ public record KeycloakConfiguration
     public string Authority { get; private init; }
     public string ClientId { get; private init; }
     public string? ClientSecret { get; private init; }
+    public string? CertificatePath { get; private init; }
     public string? PrivateKeyPath { get; private init; }
 
     /// <summary>
@@ -29,9 +30,15 @@ public record KeycloakConfiguration
     /// </summary>
     /// <param name="authority">OpenID Connect Authority (realm URL)</param>
     /// <param name="clientId">OpenID Connect Client ID</param>
+    /// <param name="certificatePath">Path to PEM-formatted certificate to use for JWKS endpoint.</param>
     /// <param name="privateKeyPath">Path to PEM-formatted private key to use for Signed JWT client authentication.</param>
-    public static KeycloakConfiguration WithSignedJwt(string authority, string clientId, string privateKeyPath)
+    public static KeycloakConfiguration WithSignedJwt(string authority, string clientId, string certificatePath,
+        string privateKeyPath)
     {
-        return new KeycloakConfiguration(authority, clientId) { PrivateKeyPath = privateKeyPath };
+        return new KeycloakConfiguration(authority, clientId)
+        {
+            CertificatePath = certificatePath,
+            PrivateKeyPath = privateKeyPath
+        };
     }
 }

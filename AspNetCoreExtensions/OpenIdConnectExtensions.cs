@@ -4,6 +4,7 @@ using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -14,9 +15,9 @@ public static class OpenIdConnectExtensions
 {
     private static void ValidateConfiguration(KeycloakConfiguration idp)
     {
-        if (string.IsNullOrWhiteSpace(idp.ClientSecret) && idp.PrivateKeyPath is null)
+        if (string.IsNullOrWhiteSpace(idp.ClientSecret) && (idp.PrivateKeyPath is null || idp.CertificatePath is null))
         {
-            throw new InvalidOperationException("Either client secret or certificate uri must be set.");
+            throw new InvalidOperationException("Either client secret or both certificate uris must be set.");
         }
     }
 
@@ -39,8 +40,13 @@ public static class OpenIdConnectExtensions
             ValidateConfiguration(idp);
 
             services.AddSingleton<ClientAssertionService>(_ =>
-                new ClientAssertionService(idp.Authority, idp.ClientId, idp.PrivateKeyPath));
+                new ClientAssertionService(idp.Authority, idp.ClientId, idp.CertificatePath, idp.PrivateKeyPath));
             services.AddTransient<OidcEvents>();
+
+            if (idp.CertificatePath is not null)
+            {
+                services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
+            }
 
             services.AddAuthentication(x =>
                 {
@@ -125,6 +131,20 @@ public static class OpenIdConnectExtensions
 
             services.AddOpenIdConnectAccessTokenManagement()
                 .AddBlazorServerAccessTokenManagement<ServerSideTokenStore>();
+        }
+    }
+
+    extension(WebApplication app)
+    {
+        public void UseKeycloakAuthentication(KeycloakConfiguration idp)
+        {
+            ValidateConfiguration(idp);
+
+            if (idp.CertificatePath is not null)
+            {
+                app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
+                    .AllowAnonymous().Produces<JwksResponse>();
+            }
         }
     }
 }
