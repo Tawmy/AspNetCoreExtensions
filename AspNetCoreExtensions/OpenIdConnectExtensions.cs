@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AspNetCoreExtensions.Keycloak;
+using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -67,6 +68,8 @@ public static class OpenIdConnectExtensions
                     // .NET 9 added pushed authorization requests, avoids OIDC request using GET query parameters
                     // https://oauth.net/2/pushed-authorization-requests/ <- linked resource has great visualisation
                     x.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Require;
+
+                    x.SaveTokens = true;
                 })
                 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, x =>
                 {
@@ -80,7 +83,9 @@ public static class OpenIdConnectExtensions
 
                     // session id is considered essential, does not require user consent in EU
                     x.Cookie.IsEssential = true;
-                    x.Cookie.SecurePolicy = CookieSecurePolicy.Always; // always require https
+
+                    // always require https
+                    x.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
                     // cookie is valid for 30 mins as per owasp recommendation
                     x.ExpireTimeSpan = TimeSpan.FromMinutes(30);
@@ -90,35 +95,9 @@ public static class OpenIdConnectExtensions
 
                     // TODO refresh token if session extended -> keep Keycloak session alive
                 });
-        }
 
-        /// <summary>
-        ///     Add OAuth refresh token support
-        /// </summary>
-        /// <param name="cookieScheme">
-        ///     Name of the cookie authentication scheme, usually
-        ///     <see cref="CookieAuthenticationDefaults.AuthenticationScheme" />.
-        /// </param>
-        /// <param name="oidcScheme">Scheme name for OpenID Connect authentication.</param>
-        public void ConfigureCookieOidcRefresh(string cookieScheme,
-            string oidcScheme)
-        {
-            // ASP.NET Core does currently not support OAuth refresh tokens
-            // Support is planned for .NET 10: https://github.com/dotnet/aspnetcore/issues/8175
-            services.AddSingleton<CookieOidcRefresher>();
-            services.AddOptions<CookieAuthenticationOptions>(cookieScheme)
-                .Configure<CookieOidcRefresher>((cookieOptions, refresher) =>
-                {
-                    cookieOptions.Events.OnValidatePrincipal =
-                        context => refresher.ValidateOrRefreshCookieAsync(context, oidcScheme);
-                });
-            services.AddOptions<OpenIdConnectOptions>(oidcScheme).Configure(oidcOptions =>
-            {
-                // request offline_acccess scope to retrieve a refresh token without expiry
-                oidcOptions.Scope.Add(OpenIdConnectScope.OfflineAccess);
-                // ASP.NET Core does not save access and refresh tokens by default, but we need to store the refresh token
-                oidcOptions.SaveTokens = true;
-            });
+            services.AddOpenIdConnectAccessTokenManagement()
+                .AddBlazorServerAccessTokenManagement<ServerSideTokenStore>();
         }
     }
 }
