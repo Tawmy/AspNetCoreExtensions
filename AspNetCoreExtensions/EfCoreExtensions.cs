@@ -7,30 +7,33 @@ namespace AspNetCoreExtensions;
 
 public static class EfCoreExtensions
 {
-    public static async Task MigrateDatabaseAsync<T>(this IServiceProvider serviceProvider) where T : DbContext
+    extension(IServiceProvider serviceProvider)
     {
-        using var scope = serviceProvider.CreateScope();
-
-        var dbContext = scope.ServiceProvider.GetRequiredService<T>();
-
-        await dbContext.Database.MigrateAsync();
-
-        // Reload Npgsql types
-        // https://github.com/npgsql/efcore.pg/issues/292#issuecomment-1829713529
-        if (dbContext.Database.GetDbConnection() is NpgsqlConnection npgsqlConnection)
+        public async Task MigrateDatabaseAsync<T>() where T : DbContext
         {
-            if (npgsqlConnection.State != ConnectionState.Open)
-            {
-                await npgsqlConnection.OpenAsync();
-            }
+            using var scope = serviceProvider.CreateScope();
 
-            try
+            var dbContext = scope.ServiceProvider.GetRequiredService<T>();
+
+            await dbContext.Database.MigrateAsync();
+
+            // Reload Npgsql types
+            // https://github.com/npgsql/efcore.pg/issues/292#issuecomment-1829713529
+            if (dbContext.Database.GetDbConnection() is NpgsqlConnection npgsqlConnection)
             {
-                await npgsqlConnection.ReloadTypesAsync();
-            }
-            finally
-            {
-                await npgsqlConnection.CloseAsync();
+                if (npgsqlConnection.State != ConnectionState.Open)
+                {
+                    await npgsqlConnection.OpenAsync();
+                }
+
+                try
+                {
+                    await npgsqlConnection.ReloadTypesAsync();
+                }
+                finally
+                {
+                    await npgsqlConnection.CloseAsync();
+                }
             }
         }
     }

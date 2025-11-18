@@ -9,22 +9,6 @@ namespace AspNetCoreExtensions;
 
 public static class BlazorRoutingExtensions
 {
-    // https://github.com/dotnet/blazor-samples/blob/main/9.0/BlazorWebAppOidcBff/BlazorWebAppOidc/LoginLogoutEndpointRouteBuilderExtensions.cs
-
-    public static void MapLoginAndLogout(this IEndpointRouteBuilder endpoints, string oidcScheme)
-    {
-        var group = endpoints.MapGroup("");
-
-        group.MapGet("/login", (string? returnUrl) => TypedResults.Challenge(GetAuthProperties(returnUrl)))
-            .AllowAnonymous();
-
-        // Sign out of the Cookie and OIDC handlers. If you do not sign out with the OIDC handler,
-        // the user will automatically be signed back in the next time they visit a page that requires authentication
-        // without being able to choose another account.
-        group.MapPost("/logout", ([FromForm] string? returnUrl) => TypedResults.SignOut(GetAuthProperties(returnUrl),
-            [CookieAuthenticationDefaults.AuthenticationScheme, oidcScheme]));
-    }
-
     private static AuthenticationProperties GetAuthProperties(string? returnUrl)
     {
         // TODO: Use HttpContext.Request.PathBase instead.
@@ -45,5 +29,24 @@ public static class BlazorRoutingExtensions
         }
 
         return new AuthenticationProperties { RedirectUri = returnUrl };
+    }
+
+    // https://github.com/dotnet/blazor-samples/blob/main/9.0/BlazorWebAppOidcBff/BlazorWebAppOidc/LoginLogoutEndpointRouteBuilderExtensions.cs
+    extension(IEndpointRouteBuilder endpoints)
+    {
+        public void MapLoginAndLogout(string oidcScheme)
+        {
+            var group = endpoints.MapGroup("");
+
+            group.MapGet("/login", (string? returnUrl) => TypedResults.Challenge(GetAuthProperties(returnUrl)))
+                .AllowAnonymous();
+
+            // Sign out of the Cookie and OIDC handlers. If you do not sign out with the OIDC handler,
+            // the user will automatically be signed back in the next time they visit a page that requires authentication
+            // without being able to choose another account.
+            group.MapPost("/logout", ([FromForm] string? returnUrl) => TypedResults.SignOut(
+                GetAuthProperties(returnUrl),
+                [CookieAuthenticationDefaults.AuthenticationScheme, oidcScheme]));
+        }
     }
 }
