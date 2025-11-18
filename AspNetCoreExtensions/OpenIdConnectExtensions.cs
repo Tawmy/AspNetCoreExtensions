@@ -12,6 +12,14 @@ namespace AspNetCoreExtensions;
 
 public static class OpenIdConnectExtensions
 {
+    private static void ValidateConfiguration(KeycloakConfiguration idp)
+    {
+        if (string.IsNullOrWhiteSpace(idp.ClientSecret) && idp.PrivateKeyPath is null)
+        {
+            throw new InvalidOperationException("Either client secret or certificate uri must be set.");
+        }
+    }
+
     /// <param name="services">Service collection.</param>
     extension(IServiceCollection services)
     {
@@ -28,16 +36,30 @@ public static class OpenIdConnectExtensions
             var options = new KeycloakAuthenticationOptions();
             configureOptions?.Invoke(options);
 
-            services.AddAuthentication(options.AuthenticationScheme)
+            ValidateConfiguration(idp);
+
+            services.AddSingleton<ClientAssertionService>(_ =>
+                new ClientAssertionService(idp.Authority, idp.ClientId, idp.PrivateKeyPath));
+            services.AddTransient<OidcEvents>();
+
+            services.AddAuthentication(x =>
+                {
+                    x.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    x.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    x.DefaultChallengeScheme = options.AuthenticationScheme;
+                })
                 .AddOpenIdConnect(options.AuthenticationScheme, x =>
                 {
+                    // ASP.NET Core adds default scopes, remove them to avoid conflicts
+                    x.Scope.Clear();
+
                     configureOpenIdConnect?.Invoke(x);
 
                     // use cookie authentication scheme to persist user credentials across requests
                     x.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
-                    // use default openid and profile scopes, feel free to add any others that are necessary in client
-                    x.Scope.Add(OpenIdConnectScope.OpenIdProfile);
+                    // add openid scope to trigger OpenID Connect flow
+                    x.Scope.Add(OpenIdConnectScope.OpenId);
 
                     // using authority automatically sets endpoints like auth, token, and userinfo
                     x.Authority = idp.Authority;
@@ -45,7 +67,11 @@ public static class OpenIdConnectExtensions
                     // use client id and secret as backend can save secret safely.
                     // pkce is enabled by default (force in keycloak client for double security)
                     x.ClientId = idp.ClientId;
-                    x.ClientSecret = idp.ClientSecret;
+
+                    if (idp.ClientSecret is not null)
+                    {
+                        x.ClientSecret = idp.ClientSecret;
+                    }
 
                     // Use code for auth code flow, avoid implicit flow (less secure, will be omitted from OAuth 2.1 spec)
                     x.ResponseType = OpenIdConnectResponseType.Code;
@@ -54,7 +80,7 @@ public static class OpenIdConnectExtensions
                     x.MapInboundClaims = false;
 
                     // Keycloak uses preferred_username as default, feel free to use any other claim
-                    x.TokenValidationParameters.NameClaimType = "preferred_username";
+                    x.TokenValidationParameters.NameClaimType = options.NameClaimType;
 
                     // certain claims like roles are not part of ID token to keep its size in check
                     x.GetClaimsFromUserInfoEndpoint = true;
@@ -70,6 +96,7 @@ public static class OpenIdConnectExtensions
                     x.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Require;
 
                     x.SaveTokens = true;
+                    x.EventsType = typeof(OidcEvents);
                 })
                 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, x =>
                 {
