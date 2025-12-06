@@ -9,13 +9,13 @@ public static class EfCoreExtensions
 {
     extension(IServiceProvider serviceProvider)
     {
-        public async Task MigrateDatabaseAsync<T>() where T : DbContext
+        public async Task MigrateDatabaseAsync<T>(CancellationToken cancellationToken = default) where T : DbContext
         {
             using var scope = serviceProvider.CreateScope();
 
             var dbContext = scope.ServiceProvider.GetRequiredService<T>();
 
-            await dbContext.Database.MigrateAsync();
+            await dbContext.Database.MigrateAsync(cancellationToken);
 
             // Reload Npgsql types
             // https://github.com/npgsql/efcore.pg/issues/292#issuecomment-1829713529
@@ -23,12 +23,12 @@ public static class EfCoreExtensions
             {
                 if (npgsqlConnection.State != ConnectionState.Open)
                 {
-                    await npgsqlConnection.OpenAsync();
+                    await npgsqlConnection.OpenAsync(cancellationToken);
                 }
 
                 try
                 {
-                    await npgsqlConnection.ReloadTypesAsync();
+                    await npgsqlConnection.ReloadTypesAsync(cancellationToken);
                 }
                 finally
                 {

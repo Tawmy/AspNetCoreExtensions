@@ -1,12 +1,15 @@
 using System.Security.Claims;
 using AspNetCoreExtensions.Keycloak;
+using AspNetCoreExtensions.Keycloak.Db;
 using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -33,9 +36,14 @@ public static class OpenIdConnectExtensions
         /// <param name="idp">Identity Provider configuration. Load this safely.</param>
         /// <param name="configureOptions">Optional config and overrides for authentication configuration.</param>
         /// <param name="configureOpenIdConnect">ASP.NET Core OpenIdConnectOptions that go beyond basic configuration.</param>
-        public void AddKeycloakAuthentication(KeycloakConfiguration idp,
+        /// <param name="databaseOptions">
+        ///     Optional database configuration. If set, encryption keys and sessions are
+        ///     persisted to database.
+        /// </param>
+        public StartupConfiguration AddKeycloakAuthentication(KeycloakConfiguration idp,
             Action<KeycloakAuthenticationOptions>? configureOptions = null,
-            Action<OpenIdConnectOptions>? configureOpenIdConnect = null)
+            Action<OpenIdConnectOptions>? configureOpenIdConnect = null,
+            DatabaseOptions? databaseOptions = null)
         {
             var options = new KeycloakAuthenticationOptions();
             configureOptions?.Invoke(options);
@@ -50,6 +58,15 @@ public static class OpenIdConnectExtensions
             if (idp.CertificatePath is not null)
             {
                 services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
+            }
+
+            if (databaseOptions is not null)
+            {
+                services.AddDbContext<DatabaseContext>(x =>
+                {
+                    x.UseNpgsql(databaseOptions.ConnectionString).UseSnakeCaseNamingConvention();
+                });
+                services.AddDataProtection().PersistKeysToDbContext<DatabaseContext>();
             }
 
             services.AddAuthentication(x =>
@@ -140,22 +157,30 @@ public static class OpenIdConnectExtensions
 
             services.AddOpenIdConnectAccessTokenManagement()
                 .AddBlazorServerAccessTokenManagement<ServerSideTokenStore>();
+
+            return new StartupConfiguration(idp, databaseOptions);
         }
     }
 
     extension(WebApplication app)
     {
-        public void UseKeycloakAuthentication(KeycloakConfiguration idp)
+        public async Task UseKeycloakAuthenticationAsync(StartupConfiguration config,
+            CancellationToken cancellationToken = default)
         {
-            ValidateConfiguration(idp);
+            ValidateConfiguration(config.KeycloakConfiguration);
 
-            if (idp.CertificatePath is not null)
+            if (config.KeycloakConfiguration.CertificatePath is not null)
             {
                 app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
                     .AllowAnonymous().Produces<JwksResponse>();
             }
 
             app.MapBackchannelLogoutEndpoint();
+
+            if (config.DatabaseOptions is not null)
+            {
+                await app.Services.MigrateDatabaseAsync<DatabaseContext>(cancellationToken);
+            }
         }
 
         private void MapBackchannelLogoutEndpoint()
