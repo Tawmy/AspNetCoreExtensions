@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -13,6 +14,8 @@ namespace AspNetCoreExtensions;
 
 public static class OpenIdConnectExtensions
 {
+    private static readonly SessionStore SessionStore = new();
+
     private static void ValidateConfiguration(KeycloakConfiguration idp)
     {
         if (string.IsNullOrWhiteSpace(idp.ClientSecret) && (idp.PrivateKeyPath is null || idp.CertificatePath is null))
@@ -42,6 +45,7 @@ public static class OpenIdConnectExtensions
             services.AddSingleton<ClientAssertionService>(_ =>
                 new ClientAssertionService(idp.Authority, idp.ClientId, idp.CertificatePath, idp.PrivateKeyPath));
             services.AddTransient<OidcEvents>();
+            services.AddTransient<BackchannelLogoutService>();
 
             if (idp.CertificatePath is not null)
             {
@@ -101,7 +105,9 @@ public static class OpenIdConnectExtensions
                     // https://oauth.net/2/pushed-authorization-requests/ <- linked resource has great visualisation
                     x.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Require;
 
+                    // Save tokens so we can use refresh tokens and use ID tokens for logout
                     x.SaveTokens = true;
+
                     x.EventsType = typeof(OidcEvents);
                 })
                 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, x =>
@@ -126,6 +132,9 @@ public static class OpenIdConnectExtensions
                     // if half of cookie lifetime expired, a new one is issued
                     x.SlidingExpiration = true;
 
+                    // Custom session store reduces cookie size and allows for better session management
+                    x.SessionStore = SessionStore;
+
                     // TODO refresh token if session extended -> keep Keycloak session alive
                 });
 
@@ -145,6 +154,32 @@ public static class OpenIdConnectExtensions
                 app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
                     .AllowAnonymous().Produces<JwksResponse>();
             }
+
+            app.MapBackchannelLogoutEndpoint();
+        }
+
+        private void MapBackchannelLogoutEndpoint()
+        {
+            app.MapPost("/signout-backchannel-oidc",
+                async ([FromForm(Name = "logout_token")] string token, BackchannelLogoutService bls,
+                    CancellationToken cancellationToken) =>
+                {
+                    if (string.IsNullOrWhiteSpace(token))
+                    {
+                        return Results.BadRequest("Logout token is required.");
+                    }
+
+                    var identity = await bls.ValidateLogoutTokenAsync(token, cancellationToken);
+
+                    if (identity is null)
+                    {
+                        return Results.BadRequest("Invalid logout token.");
+                    }
+
+                    await SessionStore.RemoveAsync(identity.FindFirst("sid")?.Value
+                                                   ?? throw new InvalidOperationException("no sid claim"));
+                    return Results.Ok();
+                }).AllowAnonymous().DisableAntiforgery().Accepts<string>("application/x-www-form-urlencoded");
         }
     }
 }
