@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Claims;
 using AspNetCoreExtensions.Keycloak.Db;
 using AspNetCoreExtensions.Keycloak.Db.Models;
 using Microsoft.AspNetCore.Authentication;
@@ -18,17 +17,16 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         new(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(options.ConnectionString)
             .UseSnakeCaseNamingConvention().Options);
 
-    private int readCount;
-
     public async Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var sid = ticket.Principal.FindFirst("sid")?.Value ?? throw new InvalidOperationException("no sid claim");
         await using var context = await _dbContextFactory.CreateDbContextAsync();
+
         await context.UserSessions.AddAsync(new UserSession
         {
             Sid = Guid.Parse(sid, CultureInfo.InvariantCulture),
-            Principal = await ConvertToBase64Async(ticket.Principal),
-            Properties = Convert.ToBase64String(PropertiesSerializer.Default.Serialize(ticket.Properties)),
+            Principal = ticket.Principal,
+            Properties = ticket.Properties,
             AuthenticationScheme = ticket.AuthenticationScheme
         });
 
@@ -56,8 +54,8 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
             throw new InvalidOperationException("Session not found, renewal failed.");
         }
 
-        session.Principal = await ConvertToBase64Async(ticket.Principal);
-        session.Properties = Convert.ToBase64String(PropertiesSerializer.Default.Serialize(ticket.Properties));
+        session.Principal = ticket.Principal;
+        session.Properties = ticket.Properties;
         session.AuthenticationScheme = ticket.AuthenticationScheme;
 
         try
@@ -72,25 +70,14 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
 
     public async Task<AuthenticationTicket?> RetrieveAsync(string key)
     {
-        readCount++;
-
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
 
         var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
 
-        if (session is null)
-        {
-            return null;
-        }
-
-        var principal = ConvertFromBase64(session.Principal);
-        var properties = session.Properties is not null
-            ? PropertiesSerializer.Default.Deserialize(Convert.FromBase64String(session.Properties))
+        return session is not null
+            ? new AuthenticationTicket(session.Principal, session.Properties, session.AuthenticationScheme)
             : null;
-
-        Console.WriteLine($"Session read {readCount} times");
-        return new AuthenticationTicket(principal, properties, session.AuthenticationScheme);
     }
 
     public async Task RemoveAsync(string key)
@@ -115,21 +102,5 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         {
             throw new DbUpdateException($"Failed to remove session {sid} from database.", e);
         }
-    }
-
-    private static async Task<string> ConvertToBase64Async(ClaimsPrincipal claimsPrincipal)
-    {
-        using MemoryStream memoryStream = new();
-        await using var writer = new BinaryWriter(memoryStream);
-        claimsPrincipal.WriteTo(writer);
-        return Convert.ToBase64String(memoryStream.ToArray());
-    }
-
-    private static ClaimsPrincipal ConvertFromBase64(string claimsPrincipal)
-    {
-        var bytes = Convert.FromBase64String(claimsPrincipal);
-        using MemoryStream memoryStream = new(bytes);
-        using var reader = new BinaryReader(memoryStream);
-        return new ClaimsPrincipal(reader);
     }
 }
