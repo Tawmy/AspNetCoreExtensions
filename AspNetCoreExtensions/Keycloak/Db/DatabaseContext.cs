@@ -1,3 +1,4 @@
+using AspNetCoreExtensions.Keycloak.Db.Models;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,8 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
     public DatabaseContext()
     {
     }
+
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
 
     // ASP.NET Core data protection keys, otherwise we lose encryption keys after every restart.
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -35,6 +38,8 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+
         // always generate identity column, do not allow user values unless explicitly configured
         builder.UseIdentityAlwaysColumns();
     }

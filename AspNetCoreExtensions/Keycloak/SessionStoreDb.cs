@@ -1,0 +1,135 @@
+using System.Globalization;
+using System.Security.Claims;
+using AspNetCoreExtensions.Keycloak.Db;
+using AspNetCoreExtensions.Keycloak.Db.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+
+namespace AspNetCoreExtensions.Keycloak;
+
+/// <summary>
+///     Simple session store implementation that persists sessions in a database.
+/// </summary>
+public class SessionStoreDb(DatabaseOptions options) : ITicketStore
+{
+    private readonly PooledDbContextFactory<DatabaseContext> _dbContextFactory =
+        new(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(options.ConnectionString)
+            .UseSnakeCaseNamingConvention().Options);
+
+    private int readCount;
+
+    public async Task<string> StoreAsync(AuthenticationTicket ticket)
+    {
+        var sid = ticket.Principal.FindFirst("sid")?.Value ?? throw new InvalidOperationException("no sid claim");
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        await context.UserSessions.AddAsync(new UserSession
+        {
+            Sid = Guid.Parse(sid, CultureInfo.InvariantCulture),
+            Principal = await ConvertToBase64Async(ticket.Principal),
+            Properties = Convert.ToBase64String(PropertiesSerializer.Default.Serialize(ticket.Properties)),
+            AuthenticationScheme = ticket.AuthenticationScheme
+        });
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            throw new DbUpdateException($"Failed to save session {sid} to the database.", e);
+        }
+
+        return sid;
+    }
+
+    public async Task RenewAsync(string key, AuthenticationTicket ticket)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
+
+        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
+
+        if (session is null)
+        {
+            throw new InvalidOperationException("Session not found, renewal failed.");
+        }
+
+        session.Principal = await ConvertToBase64Async(ticket.Principal);
+        session.Properties = Convert.ToBase64String(PropertiesSerializer.Default.Serialize(ticket.Properties));
+        session.AuthenticationScheme = ticket.AuthenticationScheme;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            throw new DbUpdateException($"Failed to renew user session {key}.", e);
+        }
+    }
+
+    public async Task<AuthenticationTicket?> RetrieveAsync(string key)
+    {
+        readCount++;
+
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
+
+        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
+
+        if (session is null)
+        {
+            return null;
+        }
+
+        var principal = ConvertFromBase64(session.Principal);
+        var properties = session.Properties is not null
+            ? PropertiesSerializer.Default.Deserialize(Convert.FromBase64String(session.Properties))
+            : null;
+
+        Console.WriteLine($"Session read {readCount} times");
+        return new AuthenticationTicket(principal, properties, session.AuthenticationScheme);
+    }
+
+    public async Task RemoveAsync(string key)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
+
+        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
+
+        if (session is null)
+        {
+            return;
+        }
+
+        context.UserSessions.Remove(session);
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            throw new DbUpdateException($"Failed to remove session {sid} from database.", e);
+        }
+    }
+
+    private static async Task<string> ConvertToBase64Async(ClaimsPrincipal claimsPrincipal)
+    {
+        using MemoryStream memoryStream = new();
+        await using var writer = new BinaryWriter(memoryStream);
+        claimsPrincipal.WriteTo(writer);
+        return Convert.ToBase64String(memoryStream.ToArray());
+    }
+
+    private static ClaimsPrincipal ConvertFromBase64(string claimsPrincipal)
+    {
+        var bytes = Convert.FromBase64String(claimsPrincipal);
+        using MemoryStream memoryStream = new(bytes);
+        using var reader = new BinaryReader(memoryStream);
+        return new ClaimsPrincipal(reader);
+    }
+}

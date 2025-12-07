@@ -3,6 +3,7 @@ using System;
 using AspNetCoreExtensions.Keycloak.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AspNetCoreExtensions.Keycloak.Db.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20251206181022_UserSessions")]
+    partial class UserSessions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,11 +42,6 @@ namespace AspNetCoreExtensions.Keycloak.Db.Migrations
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)")
                         .HasColumnName("principal");
-
-                    b.Property<string>("Properties")
-                        .HasMaxLength(20000)
-                        .HasColumnType("character varying(20000)")
-                        .HasColumnName("properties");
 
                     b.HasKey("Sid")
                         .HasName("pk_user_sessions");
@@ -72,6 +70,36 @@ namespace AspNetCoreExtensions.Keycloak.Db.Migrations
                         .HasName("pk_data_protection_keys");
 
                     b.ToTable("data_protection_keys", (string)null);
+                });
+
+            modelBuilder.Entity("AspNetCoreExtensions.Keycloak.Db.Models.UserSession", b =>
+                {
+                    b.OwnsOne("Microsoft.AspNetCore.Authentication.AuthenticationProperties", "Properties", b1 =>
+                        {
+                            b1.Property<Guid>("UserSessionSid");
+
+                            b1.Property<bool?>("AllowRefresh");
+
+                            b1.Property<DateTimeOffset?>("ExpiresUtc");
+
+                            b1.Property<bool>("IsPersistent");
+
+                            b1.Property<DateTimeOffset?>("IssuedUtc");
+
+                            b1.Property<string>("RedirectUri");
+
+                            b1.HasKey("UserSessionSid");
+
+                            b1.ToTable("user_sessions");
+
+                            b1.ToJson("properties");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UserSessionSid")
+                                .HasConstraintName("fk_user_sessions_user_sessions_sid");
+                        });
+
+                    b.Navigation("Properties");
                 });
 #pragma warning restore 612, 618
         }

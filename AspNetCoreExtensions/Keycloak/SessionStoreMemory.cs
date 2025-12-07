@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 namespace AspNetCoreExtensions.Keycloak;
 
 /// <summary>
-///     Simple session store implementation.
+///     Simple in-memory session store implementation.
 /// </summary>
-internal class SessionStore : ITicketStore
+internal class SessionStoreMemory : ITicketStore
 {
     private readonly ConcurrentDictionary<string, AuthenticationTicket> _authTickets = [];
 

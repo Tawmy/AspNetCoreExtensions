@@ -17,8 +17,6 @@ namespace AspNetCoreExtensions;
 
 public static class OpenIdConnectExtensions
 {
-    private static readonly SessionStore SessionStore = new();
-
     private static void ValidateConfiguration(KeycloakConfiguration idp)
     {
         if (string.IsNullOrWhiteSpace(idp.ClientSecret) && (idp.PrivateKeyPath is null || idp.CertificatePath is null))
@@ -60,6 +58,7 @@ public static class OpenIdConnectExtensions
                 services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
             }
 
+            ITicketStore? sessionStore = null;
             if (databaseOptions is not null)
             {
                 services.AddDbContext<DatabaseContext>(x =>
@@ -67,6 +66,11 @@ public static class OpenIdConnectExtensions
                     x.UseNpgsql(databaseOptions.ConnectionString).UseSnakeCaseNamingConvention();
                 });
                 services.AddDataProtection().PersistKeysToDbContext<DatabaseContext>();
+                sessionStore = new SessionStoreDb(databaseOptions);
+            }
+            else
+            {
+                sessionStore = new SessionStoreMemory();
             }
 
             services.AddAuthentication(x =>
@@ -150,7 +154,15 @@ public static class OpenIdConnectExtensions
                     x.SlidingExpiration = true;
 
                     // Custom session store reduces cookie size and allows for better session management
-                    x.SessionStore = SessionStore;
+
+                    if (databaseOptions is null) return;
+
+                    if (sessionStore is null)
+                    {
+                        throw new InvalidOperationException("Session store must be initialized.");
+                    }
+
+                    x.SessionStore = sessionStore;
 
                     // TODO refresh token if session extended -> keep Keycloak session alive
                 });
@@ -158,7 +170,7 @@ public static class OpenIdConnectExtensions
             services.AddOpenIdConnectAccessTokenManagement()
                 .AddBlazorServerAccessTokenManagement<ServerSideTokenStore>();
 
-            return new StartupConfiguration(idp, databaseOptions);
+            return new StartupConfiguration(idp, sessionStore, databaseOptions);
         }
     }
 
@@ -175,7 +187,7 @@ public static class OpenIdConnectExtensions
                     .AllowAnonymous().Produces<JwksResponse>();
             }
 
-            app.MapBackchannelLogoutEndpoint();
+            app.MapBackchannelLogoutEndpoint(config.SessionStore);
 
             if (config.DatabaseOptions is not null)
             {
@@ -183,7 +195,7 @@ public static class OpenIdConnectExtensions
             }
         }
 
-        private void MapBackchannelLogoutEndpoint()
+        private void MapBackchannelLogoutEndpoint(ITicketStore sessionStoreDb)
         {
             app.MapPost("/signout-backchannel-oidc",
                 async ([FromForm(Name = "logout_token")] string token, BackchannelLogoutService bls,
@@ -201,8 +213,8 @@ public static class OpenIdConnectExtensions
                         return Results.BadRequest("Invalid logout token.");
                     }
 
-                    await SessionStore.RemoveAsync(identity.FindFirst("sid")?.Value
-                                                   ?? throw new InvalidOperationException("no sid claim"));
+                    await sessionStoreDb.RemoveAsync(identity.FindFirst("sid")?.Value
+                                                     ?? throw new InvalidOperationException("no sid claim"));
                     return Results.Ok();
                 }).AllowAnonymous().DisableAntiforgery().Accepts<string>("application/x-www-form-urlencoded");
         }
