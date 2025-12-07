@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AspNetCoreExtensions.Keycloak;
 using AspNetCoreExtensions.Keycloak.Db;
+using Duende.AccessTokenManagement;
 using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -56,6 +57,7 @@ public static class OpenIdConnectExtensions
             if (idp.CertificatePath is not null)
             {
                 services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
+                services.AddSingleton<ITokenRequestCustomizer, SignedJwtRequestCustomizer>();
             }
 
             ITicketStore? sessionStore = null;
