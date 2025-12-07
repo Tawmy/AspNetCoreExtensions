@@ -1,11 +1,15 @@
 using System.Security.Claims;
 using AspNetCoreExtensions.Keycloak;
+using AspNetCoreExtensions.Keycloak.Db;
 using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -30,9 +34,14 @@ public static class OpenIdConnectExtensions
         /// <param name="idp">Identity Provider configuration. Load this safely.</param>
         /// <param name="configureOptions">Optional config and overrides for authentication configuration.</param>
         /// <param name="configureOpenIdConnect">ASP.NET Core OpenIdConnectOptions that go beyond basic configuration.</param>
-        public void AddKeycloakAuthentication(KeycloakConfiguration idp,
+        /// <param name="databaseOptions">
+        ///     Optional database configuration. If set, encryption keys and sessions are
+        ///     persisted to database.
+        /// </param>
+        public StartupConfiguration AddKeycloakAuthentication(KeycloakConfiguration idp,
             Action<KeycloakAuthenticationOptions>? configureOptions = null,
-            Action<OpenIdConnectOptions>? configureOpenIdConnect = null)
+            Action<OpenIdConnectOptions>? configureOpenIdConnect = null,
+            DatabaseOptions? databaseOptions = null)
         {
             var options = new KeycloakAuthenticationOptions();
             configureOptions?.Invoke(options);
@@ -42,10 +51,26 @@ public static class OpenIdConnectExtensions
             services.AddSingleton<ClientAssertionService>(_ =>
                 new ClientAssertionService(idp.Authority, idp.ClientId, idp.CertificatePath, idp.PrivateKeyPath));
             services.AddTransient<OidcEvents>();
+            services.AddTransient<BackchannelLogoutService>();
 
             if (idp.CertificatePath is not null)
             {
                 services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
+            }
+
+            ITicketStore? sessionStore = null;
+            if (databaseOptions is not null)
+            {
+                services.AddDbContext<DatabaseContext>(x =>
+                {
+                    x.UseNpgsql(databaseOptions.ConnectionString).UseSnakeCaseNamingConvention();
+                });
+                services.AddDataProtection().PersistKeysToDbContext<DatabaseContext>();
+                sessionStore = new SessionStoreDb(databaseOptions);
+            }
+            else
+            {
+                sessionStore = new SessionStoreMemory();
             }
 
             services.AddAuthentication(x =>
@@ -101,7 +126,9 @@ public static class OpenIdConnectExtensions
                     // https://oauth.net/2/pushed-authorization-requests/ <- linked resource has great visualisation
                     x.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Require;
 
+                    // Save tokens so we can use refresh tokens and use ID tokens for logout
                     x.SaveTokens = true;
+
                     x.EventsType = typeof(OidcEvents);
                 })
                 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, x =>
@@ -126,25 +153,70 @@ public static class OpenIdConnectExtensions
                     // if half of cookie lifetime expired, a new one is issued
                     x.SlidingExpiration = true;
 
+                    // Custom session store reduces cookie size and allows for better session management
+
+                    if (databaseOptions is null) return;
+
+                    if (sessionStore is null)
+                    {
+                        throw new InvalidOperationException("Session store must be initialized.");
+                    }
+
+                    x.SessionStore = sessionStore;
+
                     // TODO refresh token if session extended -> keep Keycloak session alive
                 });
 
             services.AddOpenIdConnectAccessTokenManagement()
                 .AddBlazorServerAccessTokenManagement<ServerSideTokenStore>();
+
+            return new StartupConfiguration(idp, sessionStore, databaseOptions);
         }
     }
 
     extension(WebApplication app)
     {
-        public void UseKeycloakAuthentication(KeycloakConfiguration idp)
+        public async Task UseKeycloakAuthenticationAsync(StartupConfiguration config,
+            CancellationToken cancellationToken = default)
         {
-            ValidateConfiguration(idp);
+            ValidateConfiguration(config.KeycloakConfiguration);
 
-            if (idp.CertificatePath is not null)
+            if (config.KeycloakConfiguration.CertificatePath is not null)
             {
                 app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
                     .AllowAnonymous().Produces<JwksResponse>();
             }
+
+            app.MapBackchannelLogoutEndpoint(config.SessionStore);
+
+            if (config.DatabaseOptions is not null)
+            {
+                await app.Services.MigrateDatabaseAsync<DatabaseContext>(cancellationToken);
+            }
+        }
+
+        private void MapBackchannelLogoutEndpoint(ITicketStore sessionStoreDb)
+        {
+            app.MapPost("/signout-backchannel-oidc",
+                async ([FromForm(Name = "logout_token")] string token, BackchannelLogoutService bls,
+                    CancellationToken cancellationToken) =>
+                {
+                    if (string.IsNullOrWhiteSpace(token))
+                    {
+                        return Results.BadRequest("Logout token is required.");
+                    }
+
+                    var identity = await bls.ValidateLogoutTokenAsync(token, cancellationToken);
+
+                    if (identity is null)
+                    {
+                        return Results.BadRequest("Invalid logout token.");
+                    }
+
+                    await sessionStoreDb.RemoveAsync(identity.FindFirst("sid")?.Value
+                                                     ?? throw new InvalidOperationException("no sid claim"));
+                    return Results.Ok();
+                }).AllowAnonymous().DisableAntiforgery().Accepts<string>("application/x-www-form-urlencoded");
         }
     }
 }
