@@ -17,6 +17,8 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         new(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(options.ConnectionString)
             .UseSnakeCaseNamingConvention().Options);
 
+    private readonly SessionStoreMemory _sessionStoreMemory = new();
+
     public async Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var sid = ticket.Principal.FindFirst("sid")?.Value ?? throw new InvalidOperationException("no sid claim");
@@ -38,6 +40,8 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         {
             throw new DbUpdateException($"Failed to save session {sid} to the database.", e);
         }
+
+        await _sessionStoreMemory.StoreAsync(ticket);
 
         return sid;
     }
@@ -61,9 +65,11 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         try
         {
             await context.SaveChangesAsync();
+            await _sessionStoreMemory.RenewAsync(key, ticket);
         }
         catch (Exception e)
         {
+            await _sessionStoreMemory.RemoveAsync(key); // remove from memory since db renewal failed
             throw new DbUpdateException($"Failed to renew user session {key}.", e);
         }
     }
@@ -72,6 +78,14 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
+
+        var ticketMemory = await _sessionStoreMemory.RetrieveAsync(key);
+
+        if (ticketMemory is not null)
+        {
+            // try to return from memory before querying db
+            return ticketMemory;
+        }
 
         var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
 
@@ -101,6 +115,10 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         catch (Exception e)
         {
             throw new DbUpdateException($"Failed to remove session {sid} from database.", e);
+        }
+        finally
+        {
+            await _sessionStoreMemory.RemoveAsync(key);
         }
     }
 }
