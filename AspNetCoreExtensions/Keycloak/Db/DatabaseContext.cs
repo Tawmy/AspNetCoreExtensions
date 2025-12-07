@@ -18,6 +18,7 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
     }
 
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<UserToken> UserTokens => Set<UserToken>();
 
     // ASP.NET Core data protection keys, otherwise we lose encryption keys after every restart.
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -30,7 +31,7 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseNpgsql().UseSnakeCaseNamingConvention();
+            optionsBuilder.ConfigureDbContextOptions(null);
         }
 
         base.OnConfiguring(optionsBuilder);
@@ -42,5 +43,16 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
 
         // always generate identity column, do not allow user values unless explicitly configured
         builder.UseIdentityAlwaysColumns();
+    }
+}
+
+internal static class DbContextOptionsExtensions
+{
+    extension(DbContextOptionsBuilder builder)
+    {
+        public void ConfigureDbContextOptions(DatabaseOptions? dbOptions)
+        {
+            builder.UseNpgsql(dbOptions?.ConnectionString).UseSnakeCaseNamingConvention();
+        }
     }
 }

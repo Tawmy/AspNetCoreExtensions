@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AspNetCoreExtensions.Keycloak.Db.Models;
 
-public class UserSession
+internal class UserSession
 {
     public required Guid Sid { get; set; }
     public required ClaimsPrincipal Principal { get; set; }
@@ -13,7 +13,7 @@ public class UserSession
     public required string AuthenticationScheme { get; set; }
 }
 
-public class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
+internal class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
 {
     public void Configure(EntityTypeBuilder<UserSession> builder)
     {

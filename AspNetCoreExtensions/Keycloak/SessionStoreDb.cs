@@ -11,11 +11,9 @@ namespace AspNetCoreExtensions.Keycloak;
 /// <summary>
 ///     Simple session store implementation that persists sessions in a database.
 /// </summary>
-public class SessionStoreDb(DatabaseOptions options) : ITicketStore
+internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> options) : ITicketStore
 {
-    private readonly PooledDbContextFactory<DatabaseContext> _dbContextFactory =
-        new(new DbContextOptionsBuilder<DatabaseContext>().UseNpgsql(options.ConnectionString)
-            .UseSnakeCaseNamingConvention().Options);
+    private readonly PooledDbContextFactory<DatabaseContext> _dbContextFactory = CreateDbContextFactory(options);
 
     private readonly SessionStoreMemory _sessionStoreMemory = new();
 
@@ -120,5 +118,13 @@ public class SessionStoreDb(DatabaseOptions options) : ITicketStore
         {
             await _sessionStoreMemory.RemoveAsync(key);
         }
+    }
+
+    private static PooledDbContextFactory<DatabaseContext> CreateDbContextFactory(
+        Action<DbContextOptionsBuilder<DatabaseContext>> optionsAction)
+    {
+        var options = new DbContextOptionsBuilder<DatabaseContext>();
+        optionsAction.Invoke(options);
+        return new PooledDbContextFactory<DatabaseContext>(options.Options);
     }
 }

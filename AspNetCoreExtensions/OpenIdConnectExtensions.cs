@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -60,15 +59,12 @@ public static class OpenIdConnectExtensions
                 services.AddSingleton<ITokenRequestCustomizer, SignedJwtRequestCustomizer>();
             }
 
-            ITicketStore? sessionStore = null;
+            ITicketStore? sessionStore;
             if (databaseOptions is not null)
             {
-                services.AddDbContext<DatabaseContext>(x =>
-                {
-                    x.UseNpgsql(databaseOptions.ConnectionString).UseSnakeCaseNamingConvention();
-                });
+                services.AddPooledDbContextFactory<DatabaseContext>(x => x.ConfigureDbContextOptions(databaseOptions));
                 services.AddDataProtection().PersistKeysToDbContext<DatabaseContext>();
-                sessionStore = new SessionStoreDb(databaseOptions);
+                sessionStore = new SessionStoreDb(x => x.ConfigureDbContextOptions(databaseOptions));
             }
             else
             {
@@ -169,8 +165,16 @@ public static class OpenIdConnectExtensions
                     // TODO refresh token if session extended -> keep Keycloak session alive
                 });
 
-            services.AddOpenIdConnectAccessTokenManagement()
-                .AddBlazorServerAccessTokenManagement<ServerSideTokenStore>();
+            services.AddOpenIdConnectAccessTokenManagement();
+
+            if (databaseOptions is not null)
+            {
+                services.AddBlazorServerAccessTokenManagement<TokenStoreDb>();
+            }
+            else
+            {
+                services.AddBlazorServerAccessTokenManagement<TokenStoreMemory>();
+            }
 
             return new StartupConfiguration(idp, sessionStore, databaseOptions);
         }
@@ -216,7 +220,8 @@ public static class OpenIdConnectExtensions
                     }
 
                     await sessionStoreDb.RemoveAsync(identity.FindFirst("sid")?.Value
-                                                     ?? throw new InvalidOperationException("no sid claim"));
+                                                     ?? throw new InvalidOperationException("no sid claim"),
+                        cancellationToken);
                     return Results.Ok();
                 }).AllowAnonymous().DisableAntiforgery().Accepts<string>("application/x-www-form-urlencoded");
         }
