@@ -1,3 +1,6 @@
 ﻿<Solution>
-    <Project Path="AspNetCoreExtensions\AspNetCoreExtensions.csproj" Type="Classic C#"/>
+    <Folder Name="/Solution Items/">
+        <File Path=".github\workflows\publish.yml" />
+    </Folder>
+    <Project Path="AspNetCoreExtensions\AspNetCoreExtensions.csproj" Type="C#" />
 </Solution>
