@@ -90,6 +90,12 @@ public static class OpenIdConnectExtensions
                     // add openid scope to trigger OpenID Connect flow
                     x.Scope.Add(OpenIdConnectScope.OpenId);
 
+                    // add additional scopes from IdP configuration
+                    foreach (var scope in idp.Scopes)
+                    {
+                        x.Scope.Add(scope);
+                    }
+
                     // using authority automatically sets endpoints like auth, token, and userinfo
                     x.Authority = idp.Authority;
 
