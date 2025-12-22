@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak.Db.Models;
+namespace AspNetCoreExtensions.Keycloak.Internal.Db.Models;
 
 internal class UserSession
 {

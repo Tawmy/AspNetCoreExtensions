@@ -1,8 +1,9 @@
-using AspNetCoreExtensions.OpenIdConnect.Keycloak;
+using AspNetCoreExtensions.Keycloak.Internal;
+using AspNetCoreExtensions.Keycloak.Options;
 using Duende.AccessTokenManagement;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AspNetCoreExtensions.OpenIdConnect;
+namespace AspNetCoreExtensions.Keycloak;
 
 public static class ClientCredentialsExtensions
 {

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
-namespace AspNetCoreExtensions.OpenIdConnect;
+namespace AspNetCoreExtensions.Keycloak;
 
 public static class BlazorRoutingExtensions
 {

@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
 ///     Depending on whether we use OpenID Connect (Blazor app) or Jwt Authorization (APIs), claims need to be parsed

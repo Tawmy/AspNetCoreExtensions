@@ -1,4 +1,4 @@
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Options;
 
 public record DatabaseOptions
 {

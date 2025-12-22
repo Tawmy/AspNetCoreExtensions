@@ -1,8 +1,9 @@
-using AspNetCoreExtensions.OpenIdConnect.Keycloak.Db.Models;
+using AspNetCoreExtensions.Keycloak.Internal.Db.Models;
+using AspNetCoreExtensions.Keycloak.Options;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak.Db;
+namespace AspNetCoreExtensions.Keycloak.Internal.Db;
 
 internal class DatabaseContext : DbContext, IDataProtectionKeyContext
 {

@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.IdentityModel.Tokens;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 internal class JwtFactory(SecurityKey securityKey, X509Certificate2 cert, string oidcAuthority, string oidcClientId)
 {

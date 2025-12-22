@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Options;
 
 public record StartupConfiguration
 {

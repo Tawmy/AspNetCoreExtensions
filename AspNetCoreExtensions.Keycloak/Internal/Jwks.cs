@@ -4,7 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 internal class JwksProvider(string certificateUri)
 {

@@ -3,7 +3,7 @@ using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Yarp.ReverseProxy.Transforms;
 
-namespace AspNetCoreExtensions.OpenIdConnect;
+namespace AspNetCoreExtensions.Keycloak;
 
 internal static class BffExtensions
 {
