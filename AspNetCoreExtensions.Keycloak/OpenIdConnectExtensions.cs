@@ -197,8 +197,7 @@ public static class OpenIdConnectExtensions
 
             if (config.KeycloakConfiguration.CertificatePath is not null)
             {
-                app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
-                    .AllowAnonymous().Produces<JwksResponse>();
+                app.MapJwksEndpoint();
             }
 
             app.MapBackchannelLogoutEndpoint(config.SessionStore);
@@ -207,6 +206,15 @@ public static class OpenIdConnectExtensions
             {
                 await app.Services.MigrateDatabaseAsync<DatabaseContext>(cancellationToken);
             }
+        }
+
+        /// <summary>
+        ///     Map JWKS endpoint for public key discovery. Do not use this if signed JWT authentication isn't used!
+        /// </summary>
+        public void MapJwksEndpoint()
+        {
+            app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
+                .AllowAnonymous().Produces<JwksResponse>();
         }
 
         private void MapBackchannelLogoutEndpoint(ITicketStore sessionStoreDb)
