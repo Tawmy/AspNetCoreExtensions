@@ -2,5 +2,7 @@
     <Folder Name="/Solution Items/">
         <File Path=".github\workflows\publish.yml"/>
     </Folder>
-    <Project Path="AspNetCoreExtensions\AspNetCoreExtensions.csproj" Type="C#"/>
+    <Project Path="AspNetCoreExtensions.EfCore/AspNetCoreExtensions.EfCore.csproj"/>
+    <Project Path="AspNetCoreExtensions.Keycloak\AspNetCoreExtensions.Keycloak.csproj"/>
+    <Project Path="AspNetCoreExtensions\AspNetCoreExtensions.csproj"/>
 </Solution>
