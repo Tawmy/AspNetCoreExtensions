@@ -19,11 +19,8 @@
         </PackageReference>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.1"/>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0"/>
+        <PackageReference Include="Tawmy.AspNetCoreExtensions.EfCore" Version="1.0.0"/>
         <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\AspNetCoreExtensions.EfCore\AspNetCoreExtensions.EfCore.csproj"/>
     </ItemGroup>
 
 </Project>
