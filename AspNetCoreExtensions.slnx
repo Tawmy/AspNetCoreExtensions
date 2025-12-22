@@ -1,5 +1,8 @@
 ﻿<Solution>
     <Folder Name="/Solution Items/">
+        <File Path=".github\workflows\publish-efcore.yml"/>
+        <File Path=".github\workflows\publish-keycloak.yml"/>
+        <File Path=".github\workflows\publish-main.yml"/>
         <File Path=".github\workflows\publish.yml"/>
     </Folder>
     <Project Path="AspNetCoreExtensions.EfCore/AspNetCoreExtensions.EfCore.csproj"/>
