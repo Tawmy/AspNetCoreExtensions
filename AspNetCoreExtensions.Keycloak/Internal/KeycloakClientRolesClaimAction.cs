@@ -2,7 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 internal class KeycloakClientRolesClaimAction()
     : JsonKeyClaimAction(ClaimTypes.Role, ClaimValueTypes.String, "resource_access")

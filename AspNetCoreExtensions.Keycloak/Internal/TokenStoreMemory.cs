@@ -3,7 +3,7 @@ using System.Security.Claims;
 using Duende.AccessTokenManagement;
 using Duende.AccessTokenManagement.OpenIdConnect;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 internal class TokenStoreMemory : IUserTokenStore
 {

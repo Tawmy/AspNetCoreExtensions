@@ -1,7 +1,8 @@
 using System.Security.Claims;
 using AspNetCoreExtensions.EfCore;
-using AspNetCoreExtensions.OpenIdConnect.Keycloak;
-using AspNetCoreExtensions.OpenIdConnect.Keycloak.Db;
+using AspNetCoreExtensions.Keycloak.Internal;
+using AspNetCoreExtensions.Keycloak.Internal.Db;
+using AspNetCoreExtensions.Keycloak.Options;
 using Duende.AccessTokenManagement;
 using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
-namespace AspNetCoreExtensions.OpenIdConnect;
+namespace AspNetCoreExtensions.Keycloak;
 
 public static class OpenIdConnectExtensions
 {

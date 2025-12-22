@@ -3,7 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using Duende.IdentityModel.Client;
 using Microsoft.IdentityModel.Tokens;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
 ///     Generates a JWT assertion for signed JWT client authentication.

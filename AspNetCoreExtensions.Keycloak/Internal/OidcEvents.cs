@@ -3,7 +3,7 @@ using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 internal class OidcEvents(IUserTokenStore store, ClientAssertionService clientAssertionService) : OpenIdConnectEvents
 {

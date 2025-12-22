@@ -1,12 +1,12 @@
 using System.Globalization;
-using AspNetCoreExtensions.OpenIdConnect.Keycloak.Db;
-using AspNetCoreExtensions.OpenIdConnect.Keycloak.Db.Models;
+using AspNetCoreExtensions.Keycloak.Internal.Db;
+using AspNetCoreExtensions.Keycloak.Internal.Db.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
 ///     Simple session store implementation that persists sessions in a database.

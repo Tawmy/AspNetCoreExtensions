@@ -1,6 +1,6 @@
 using Duende.AccessTokenManagement;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak;
+namespace AspNetCoreExtensions.Keycloak.Internal;
 
 internal class SignedJwtRequestCustomizer(ClientAssertionService assertionService) : ITokenRequestCustomizer
 {

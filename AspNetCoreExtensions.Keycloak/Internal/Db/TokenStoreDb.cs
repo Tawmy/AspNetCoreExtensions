@@ -4,7 +4,7 @@ using Duende.AccessTokenManagement;
 using Duende.AccessTokenManagement.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 
-namespace AspNetCoreExtensions.OpenIdConnect.Keycloak.Db;
+namespace AspNetCoreExtensions.Keycloak.Internal.Db;
 
 internal class TokenStoreDb(IDbContextFactory<DatabaseContext> dbContextFactory) : IUserTokenStore
 {
