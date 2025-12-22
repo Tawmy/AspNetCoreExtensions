@@ -30,10 +30,13 @@ public static class ClientCredentialsExtensions
                     }
                 });
 
-            if (idp.CertificatePath is not null)
+            if (idp.CertificatePath is null)
             {
-                services.AddSingleton<ITokenRequestCustomizer, SignedJwtRequestCustomizer>();
+                return;
             }
+
+            services.AddSingleton<ITokenRequestCustomizer, SignedJwtRequestCustomizer>();
+            services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
         }
     }
 }
