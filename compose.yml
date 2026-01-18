@@ -1,0 +1,7 @@
+﻿services:
+  sample:
+    image: ghcr.io/tawmy/aspnetcoreextensions:1.0.0
+    restart: unless-stopped
+    environment:
+      LOGGING__LOGLEVEL__DEFAULT: Information
+      LOGGING__LOGLEVEL__MICROSOFT.ASPNETCORE: Warning

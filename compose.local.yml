@@ -1,0 +1,8 @@
+﻿services:
+  sample:
+    image: aspnetcoreextensions
+    build:
+      context: .
+      dockerfile: AspNetCoreExtensions.Sample/Dockerfile
+    labels:
+      - dev.orbstack.domains=aspnetcoreextensions.local

@@ -3,8 +3,12 @@
         <File Path=".github\workflows\publish-efcore.yml"/>
         <File Path=".github\workflows\publish-keycloak.yml"/>
         <File Path=".github\workflows\publish-main.yml"/>
+        <File Path="compose.yml"/>
+        <File Path="compose.local.yml"/>
     </Folder>
     <Project Path="AspNetCoreExtensions.EfCore/AspNetCoreExtensions.EfCore.csproj"/>
     <Project Path="AspNetCoreExtensions.Keycloak/AspNetCoreExtensions.Keycloak.csproj"/>
+    <Project Path="AspNetCoreExtensions.Sample.Client/AspNetCoreExtensions.Sample.Client.csproj"/>
+    <Project Path="AspNetCoreExtensions.Sample/AspNetCoreExtensions.Sample.csproj"/>
     <Project Path="AspNetCoreExtensions\AspNetCoreExtensions.csproj"/>
 </Solution>
