@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +33,7 @@ public static class OpenIdConnectExtensions
         ///     Add Keycloak based authentication. Realm and client roles are mapped.
         /// </summary>
         /// <param name="idp">Identity Provider configuration. Load this safely.</param>
+        /// <param name="dataProtectionConfiguration">Configuration of data protection certificate(s).</param>
         /// <param name="configureOptions">Optional config and overrides for authentication configuration.</param>
         /// <param name="configureOpenIdConnect">ASP.NET Core OpenIdConnectOptions that go beyond basic configuration.</param>
         /// <param name="databaseOptions">
@@ -41,6 +41,7 @@ public static class OpenIdConnectExtensions
         ///     persisted to database.
         /// </param>
         public StartupConfiguration AddKeycloakAuthentication(KeycloakConfiguration idp,
+            DataProtectionConfiguration dataProtectionConfiguration,
             Action<KeycloakAuthenticationOptions>? configureOptions = null,
             Action<OpenIdConnectOptions>? configureOpenIdConnect = null,
             DatabaseOptions? databaseOptions = null)
@@ -65,7 +66,7 @@ public static class OpenIdConnectExtensions
             if (databaseOptions is not null)
             {
                 services.AddPooledDbContextFactory<DatabaseContext>(x => x.ConfigureDbContextOptions(databaseOptions));
-                services.AddDataProtection().PersistKeysToDbContext<DatabaseContext>();
+                services.AddDataProtection(dataProtectionConfiguration);
                 sessionStore = new SessionStoreDb(x => x.ConfigureDbContextOptions(databaseOptions));
             }
             else
