@@ -10,9 +10,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Tailwind.Extensions.AspNetCore" Version="1.1.2"/>
         <ProjectReference Include="..\AspNetCoreExtensions.Sample.Client\AspNetCoreExtensions.Sample.Client.csproj"/>
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.1"/>
     </ItemGroup>
+
+    <Target Name="TailwindBuild" BeforeTargets="Build">
+        <Exec Command="tailwindcss -i input.css -o wwwroot/app.css"/>
+    </Target>
+
+    <Target Name="TailwindPublish" BeforeTargets="Publish">
+        <Exec Command="tailwindcss -i input.css -o wwwroot/app.css --minify"/>
+    </Target>
 
     <ItemGroup>
         <Content Include="..\.dockerignore">

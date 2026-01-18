@@ -1,4 +1,5 @@
 using AspNetCoreExtensions.Sample.Components;
+using Tailwind;
 using _Imports = AspNetCoreExtensions.Sample.Client._Imports;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
+
+builder.UseTailwindCli();
 
 var app = builder.Build();
 
