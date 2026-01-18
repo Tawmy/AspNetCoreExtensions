@@ -36,7 +36,7 @@ public static class ConfigurationExtensions
         /// </summary>
         /// <param name="key">Configuration key / environment variable key.</param>
         /// <returns>Configuration value as string.</returns>
-        public string GetGuardedConfiguration(string key)
+        public string GetRequiredConfiguration(string key)
         {
             if (configuration[key] is not { } value)
             {
@@ -53,7 +53,7 @@ public static class ConfigurationExtensions
         /// <typeparam name="T">Type to convert value to.</typeparam>
         /// <returns>Configuration value converted to provided type.</returns>
         /// <exception cref="NotImplementedException">Thrown if conversion of given type T not implemented.</exception>
-        public T GetGuardedConfiguration<T>(string key) where T : struct
+        public T GetRequiredConfiguration<T>(string key) where T : struct
         {
             if (configuration[key] is not { } value)
             {
