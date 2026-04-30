@@ -12,8 +12,8 @@ public static partial class EnumExtensions
     extension(Enum enumValue)
     {
         /// <summary>
-        ///     A generic extension method that aids in reflecting
-        ///     and retrieving any attribute that is applied to an `Enum`.
+        /// A generic extension method that aids in reflecting
+        /// and retrieving any attribute that is applied to an `Enum`.
         /// </summary>
         private TAttribute? GetAttribute<TAttribute>()
             where TAttribute : Attribute

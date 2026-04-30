@@ -4,13 +4,13 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyVersion>1.0.3</AssemblyVersion>
+        <AssemblyVersion>1.0.4</AssemblyVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Duende.AccessTokenManagement.OpenIdConnect" Version="4.1.0"/>
-        <PackageReference Include="EFCore.NamingConventions" Version="10.0.0-rc.2"/>
-        <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.1"/>
+        <PackageReference Include="Duende.AccessTokenManagement.OpenIdConnect" Version="4.2.0"/>
+        <PackageReference Include="EFCore.NamingConventions" Version="10.0.1"/>
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.7"/>
         <PackageReference Include="Tawmy.AspNetCoreExtensions.EfCore" Version="1.0.0"/>
         <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0"/>
     </ItemGroup>

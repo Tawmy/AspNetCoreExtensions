@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
-///     Simple in-memory session store implementation.
+/// Simple in-memory session store implementation.
 /// </summary>
 internal class SessionStoreMemory : ITicketStore
 {

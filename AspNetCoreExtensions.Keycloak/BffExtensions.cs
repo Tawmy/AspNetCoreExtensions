@@ -13,11 +13,11 @@ internal static class BffExtensions
     extension(WebApplication app)
     {
         /// <summary>
-        ///     Map BFF endpoints for simple forwarding using YARP. The endpoints will be mapped to /bff/{prefix}.
+        /// Map BFF endpoints for simple forwarding using YARP. The endpoints will be mapped to /bff/{prefix}.
         /// </summary>
         /// <param name="endpoints">
-        ///     One or multiple endpoints to map. Consists of prefix and destination URI.
-        ///     Exmaple: new BffEndpoint("keycloak", "https://ffxiv.id/admin/realms/eorzea")
+        /// One or multiple endpoints to map. Consists of prefix and destination URI.
+        /// Exmaple: new BffEndpoint("keycloak", "https://ffxiv.id/admin/realms/eorzea")
         /// </param>
         public void MapBffForwarders(params IEnumerable<BffEndpoint> endpoints)
         {
@@ -28,10 +28,10 @@ internal static class BffExtensions
         }
 
         /// <summary>
-        ///     Map BFF endpoints for simple forwarding using YARP.
+        /// Map BFF endpoints for simple forwarding using YARP.
         /// </summary>
         /// <remarks>
-        ///     No resilience as HttpClient in Client project already uses it. This needs to do nothing but forward requests.
+        /// No resilience as HttpClient in Client project already uses it. This needs to do nothing but forward requests.
         /// </remarks>
         /// <param name="bffPrefix">Path to map. It will always begin with bff/{bffPrefix}.</param>
         /// <param name="destinationUri">Destination after <see cref="bffPrefix" />: bff/{bffPrefix}/{destinationUrl}.</param>

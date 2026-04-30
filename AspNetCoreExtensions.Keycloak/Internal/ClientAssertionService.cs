@@ -6,17 +6,17 @@ using Microsoft.IdentityModel.Tokens;
 namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
-///     Generates a JWT assertion for signed JWT client authentication.
+/// Generates a JWT assertion for signed JWT client authentication.
 /// </summary>
 /// <param name="oidcAuthority">OpenID Connect Authority (realm URL)</param>
 /// <param name="oidcClientId">OpenID Connect Client ID</param>
 /// <param name="certificateUri">
-///     Path under which certificate is located. May be null if signed JWT client authentication
-///     is not used.
+/// Path under which certificate is located. May be null if signed JWT client authentication
+/// is not used.
 /// </param>
 /// <param name="privateKeyUri">
-///     Path under which private key is located. May be null if signed JWT client authentication is
-///     not used.
+/// Path under which private key is located. May be null if signed JWT client authentication is
+/// not used.
 /// </param>
 internal class ClientAssertionService(
     string oidcAuthority,

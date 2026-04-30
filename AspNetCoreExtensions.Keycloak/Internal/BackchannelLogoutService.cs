@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
-///     This class is heavily inspired by Duende's projects. Check out their work, it is fantasic.
+/// This class is heavily inspired by Duende's projects. Check out their work, it is fantasic.
 /// </summary>
 internal class BackchannelLogoutService(
     IAuthenticationSchemeProvider authenticationSchemeProvider,

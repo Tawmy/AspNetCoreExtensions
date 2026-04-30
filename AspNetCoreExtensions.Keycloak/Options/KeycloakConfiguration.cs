@@ -16,7 +16,7 @@ public record KeycloakConfiguration
     public string? PrivateKeyPath { get; private init; }
 
     /// <summary>
-    ///     Configuration for secret-based client authentication with Keycloak.
+    /// Configuration for secret-based client authentication with Keycloak.
     /// </summary>
     /// <param name="authority">OpenID Connect Authority (realm URL)</param>
     /// <param name="clientId">OpenID Connect Client ID</param>
@@ -33,7 +33,7 @@ public record KeycloakConfiguration
     }
 
     /// <summary>
-    ///     Configuration for Signed JWT client authentication with Keycloak.
+    /// Configuration for Signed JWT client authentication with Keycloak.
     /// </summary>
     /// <param name="authority">OpenID Connect Authority (realm URL)</param>
     /// <param name="clientId">OpenID Connect Client ID</param>

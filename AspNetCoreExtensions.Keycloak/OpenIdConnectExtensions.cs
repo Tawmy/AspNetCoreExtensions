@@ -31,14 +31,14 @@ public static class OpenIdConnectExtensions
     extension(IServiceCollection services)
     {
         /// <summary>
-        ///     Add Keycloak based authentication. Realm and client roles are mapped.
+        /// Add Keycloak based authentication. Realm and client roles are mapped.
         /// </summary>
         /// <param name="idp">Identity Provider configuration. Load this safely.</param>
         /// <param name="configureOptions">Optional config and overrides for authentication configuration.</param>
         /// <param name="configureOpenIdConnect">ASP.NET Core OpenIdConnectOptions that go beyond basic configuration.</param>
         /// <param name="databaseOptions">
-        ///     Optional database configuration. If set, encryption keys and sessions are
-        ///     persisted to database.
+        /// Optional database configuration. If set, encryption keys and sessions are
+        /// persisted to database.
         /// </param>
         public StartupConfiguration AddKeycloakAuthentication(KeycloakConfiguration idp,
             Action<KeycloakAuthenticationOptions>? configureOptions = null,
@@ -209,7 +209,7 @@ public static class OpenIdConnectExtensions
         }
 
         /// <summary>
-        ///     Map JWKS endpoint for public key discovery. Do not use this if signed JWT authentication isn't used!
+        /// Map JWKS endpoint for public key discovery. Do not use this if signed JWT authentication isn't used!
         /// </summary>
         public void MapJwksEndpoint()
         {
