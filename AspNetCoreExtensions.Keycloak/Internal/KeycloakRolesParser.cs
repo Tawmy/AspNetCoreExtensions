@@ -4,16 +4,16 @@ using System.Text.Json;
 namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
-///     Depending on whether we use OpenID Connect (Blazor app) or Jwt Authorization (APIs), claims need to be parsed
-///     differently.
-///     For the Blazor app, we retrieve roles in the ID token or from the userinfo endpoint. We then use claim actions to
-///     map
-///     realm and client roles.
-///     Since realm roles are a simple structure, they can be mapped using MapJsonSubKey. This means only
-///     <see cref="ParseClientRoles" /> is used for OpenID Connect.
-///     When using Jwt Authorization, claims are mapped using the OnTokenValidated event. Both realm and client roles need
-///     to
-///     be mapped using <see cref="ParseRoles" />.
+/// Depending on whether we use OpenID Connect (Blazor app) or Jwt Authorization (APIs), claims need to be parsed
+/// differently.
+/// For the Blazor app, we retrieve roles in the ID token or from the userinfo endpoint. We then use claim actions to
+/// map
+/// realm and client roles.
+/// Since realm roles are a simple structure, they can be mapped using MapJsonSubKey. This means only
+/// <see cref="ParseClientRoles" /> is used for OpenID Connect.
+/// When using Jwt Authorization, claims are mapped using the OnTokenValidated event. Both realm and client roles need
+/// to
+/// be mapped using <see cref="ParseRoles" />.
 /// </summary>
 /// <param name="targetClaimType"></param>
 internal class KeycloakRolesParser(string targetClaimType)
@@ -23,10 +23,10 @@ internal class KeycloakRolesParser(string targetClaimType)
     private const string RolesClaim = "roles";
 
     /// <summary>
-    ///     Parse client roles from the resource_access claim.
+    /// Parse client roles from the resource_access claim.
     /// </summary>
     /// <remarks>
-    ///     While the claim is called "resource_access", the Keycloak and OAuth terms are "client"
+    /// While the claim is called "resource_access", the Keycloak and OAuth terms are "client"
     /// </remarks>
     /// <param name="resourceAccessClaim">Resource access claim</param>
     /// <returns>Enumerable of Claims in the format clientName.roleName</returns>
@@ -47,12 +47,12 @@ internal class KeycloakRolesParser(string targetClaimType)
     }
 
     /// <summary>
-    ///     Parse client and realm roles from the ClaimsIdentity.
+    /// Parse client and realm roles from the ClaimsIdentity.
     /// </summary>
     /// <param name="identity">ClaimsIdentity object from Jwt Authorization events.</param>
     /// <remarks>
-    ///     Do not use this for OIDC with Blazor. Newly added claims do not appear in user object on Blazor pages. Use
-    ///     ClaimsActions instead.
+    /// Do not use this for OIDC with Blazor. Newly added claims do not appear in user object on Blazor pages. Use
+    /// ClaimsActions instead.
     /// </remarks>
     /// <returns>Enumerable of Claims, with client roles in the format clientName.roleName</returns>
     public IEnumerable<Claim> ParseRoles(ClaimsIdentity identity)

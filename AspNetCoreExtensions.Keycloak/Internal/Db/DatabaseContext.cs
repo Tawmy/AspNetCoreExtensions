@@ -12,7 +12,7 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
     }
 
     /// <summary>
-    ///     Empty constructor for EF core command line tools.
+    /// Empty constructor for EF core command line tools.
     /// </summary>
     public DatabaseContext()
     {
@@ -25,8 +25,8 @@ internal class DatabaseContext : DbContext, IDataProtectionKeyContext
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     /// <summary>
-    ///     Context is usually configured in <see cref="OpenIdConnectExtensions" />,
-    ///     EF command line tools need this override./>
+    /// Context is usually configured in <see cref="OpenIdConnectExtensions" />,
+    /// EF command line tools need this override./>
     /// </summary>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

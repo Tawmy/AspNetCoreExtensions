@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 namespace AspNetCoreExtensions.Keycloak.Internal;
 
 /// <summary>
-///     Simple session store implementation that persists sessions in a database.
+/// Simple session store implementation that persists sessions in a database.
 /// </summary>
 internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> options) : ITicketStore
 {
