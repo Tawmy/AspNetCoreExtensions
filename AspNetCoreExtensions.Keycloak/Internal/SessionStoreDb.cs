@@ -1,4 +1,3 @@
-using System.Globalization;
 using AspNetCoreExtensions.Keycloak.Internal.Db;
 using AspNetCoreExtensions.Keycloak.Internal.Db.Models;
 using Microsoft.AspNetCore.Authentication;
@@ -24,7 +23,7 @@ internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> o
 
         await context.UserSessions.AddAsync(new UserSession
         {
-            Sid = Guid.Parse(sid, CultureInfo.InvariantCulture),
+            Sid = sid,
             Principal = ticket.Principal,
             Properties = ticket.Properties,
             AuthenticationScheme = ticket.AuthenticationScheme
@@ -47,9 +46,8 @@ internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> o
     public async Task RenewAsync(string key, AuthenticationTicket ticket)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
 
-        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
+        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == key);
 
         if (session is null)
         {
@@ -75,7 +73,6 @@ internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> o
     public async Task<AuthenticationTicket?> RetrieveAsync(string key)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
 
         var ticketMemory = await _sessionStoreMemory.RetrieveAsync(key);
 
@@ -85,7 +82,7 @@ internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> o
             return ticketMemory;
         }
 
-        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
+        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == key);
 
         return session is not null
             ? new AuthenticationTicket(session.Principal, session.Properties, session.AuthenticationScheme)
@@ -95,9 +92,8 @@ internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> o
     public async Task RemoveAsync(string key)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var sid = Guid.Parse(key, CultureInfo.InvariantCulture);
 
-        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == sid);
+        var session = await context.UserSessions.FirstOrDefaultAsync(x => x.Sid == key);
 
         if (session is null)
         {
@@ -112,7 +108,7 @@ internal class SessionStoreDb(Action<DbContextOptionsBuilder<DatabaseContext>> o
         }
         catch (Exception e)
         {
-            throw new DbUpdateException($"Failed to remove session {sid} from database.", e);
+            throw new DbUpdateException($"Failed to remove session {key} from database.", e);
         }
         finally
         {
