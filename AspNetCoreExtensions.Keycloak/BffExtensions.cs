@@ -5,7 +5,7 @@ using Yarp.ReverseProxy.Transforms;
 
 namespace AspNetCoreExtensions.Keycloak;
 
-internal static class BffExtensions
+public static class BffExtensions
 {
     private const string Prefix = "bff";
 
