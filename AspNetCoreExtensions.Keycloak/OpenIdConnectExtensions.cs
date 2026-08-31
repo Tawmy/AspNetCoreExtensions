@@ -1,7 +1,6 @@
 using System.Security.Claims;
-using AspNetCoreExtensions.EfCore;
 using AspNetCoreExtensions.Keycloak.Internal;
-using AspNetCoreExtensions.Keycloak.Internal.Db;
+using AspNetCoreExtensions.Keycloak.Internal.Valkey;
 using AspNetCoreExtensions.Keycloak.Options;
 using Duende.AccessTokenManagement;
 using Duende.AccessTokenManagement.OpenIdConnect;
@@ -14,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using StackExchange.Redis;
 
 namespace AspNetCoreExtensions.Keycloak;
 
@@ -34,16 +34,16 @@ public static class OpenIdConnectExtensions
         /// Add Keycloak based authentication. Realm and client roles are mapped.
         /// </summary>
         /// <param name="idp">Identity Provider configuration. Load this safely.</param>
+        /// <param name="valkeyOptions">
+        /// Valkey configuration. Sessions, user tokens and data protection keys are persisted to Valkey, so they
+        /// survive a restart and the application can be scaled out.
+        /// </param>
         /// <param name="configureOptions">Optional config and overrides for authentication configuration.</param>
         /// <param name="configureOpenIdConnect">ASP.NET Core OpenIdConnectOptions that go beyond basic configuration.</param>
-        /// <param name="databaseOptions">
-        /// Optional database configuration. If set, encryption keys and sessions are
-        /// persisted to database.
-        /// </param>
-        public StartupConfiguration AddKeycloakAuthentication(KeycloakConfiguration idp,
+        public void AddKeycloakAuthentication(KeycloakConfiguration idp,
+            ValkeyOptions valkeyOptions,
             Action<KeycloakAuthenticationOptions>? configureOptions = null,
-            Action<OpenIdConnectOptions>? configureOpenIdConnect = null,
-            DatabaseOptions? databaseOptions = null)
+            Action<OpenIdConnectOptions>? configureOpenIdConnect = null)
         {
             var options = new KeycloakAuthenticationOptions();
             configureOptions?.Invoke(options);
@@ -61,17 +61,7 @@ public static class OpenIdConnectExtensions
                 services.AddSingleton<ITokenRequestCustomizer, SignedJwtRequestCustomizer>();
             }
 
-            ITicketStore? sessionStore;
-            if (databaseOptions is not null)
-            {
-                services.AddPooledDbContextFactory<DatabaseContext>(x => x.ConfigureDbContextOptions(databaseOptions));
-                services.AddDataProtection().PersistKeysToDbContext<DatabaseContext>();
-                sessionStore = new SessionStoreDb(x => x.ConfigureDbContextOptions(databaseOptions));
-            }
-            else
-            {
-                sessionStore = new SessionStoreMemory();
-            }
+            services.AddStores(valkeyOptions);
 
             services.AddAuthentication(x =>
                 {
@@ -159,69 +149,76 @@ public static class OpenIdConnectExtensions
                     // if half of cookie lifetime expired, a new one is issued
                     x.SlidingExpiration = true;
 
-                    // Custom session store reduces cookie size and allows for better session management
-
-                    if (databaseOptions is null) return;
-
-                    if (sessionStore is null)
-                    {
-                        throw new InvalidOperationException("Session store must be initialized.");
-                    }
-
-                    x.SessionStore = sessionStore;
-
                     // TODO refresh token if session extended -> keep Keycloak session alive
                 });
 
+            // attached here rather than in AddCookie, which has no service provider to resolve the store from
+            services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
+                .Configure<ITicketStore>((cookieOptions, store) => cookieOptions.SessionStore = store);
+
             services.AddOpenIdConnectAccessTokenManagement();
+        }
 
-            if (databaseOptions is not null)
-            {
-                services.AddBlazorServerAccessTokenManagement<TokenStoreDb>();
-            }
-            else
-            {
-                services.AddBlazorServerAccessTokenManagement<TokenStoreMemory>();
-            }
+        /// <summary>
+        /// Register the session, token and data protection key stores, all backed by Valkey.
+        /// </summary>
+        private void AddStores(ValkeyOptions valkeyOptions)
+        {
+            var keys = new ValkeyKeys(valkeyOptions.KeyPrefix);
 
-            return new StartupConfiguration(idp, sessionStore, databaseOptions);
+            // lazy so nothing dials Valkey while services are still being registered, and so data protection and
+            // the stores end up on the same connection
+            var connection = new Lazy<IConnectionMultiplexer>(() =>
+                ConnectionMultiplexer.Connect(valkeyOptions.BuildConfiguration()));
+
+            services.AddSingleton(valkeyOptions);
+            services.AddSingleton(keys);
+            services.AddSingleton(_ => connection.Value);
+
+            // one instance behind both interfaces, so revocation and the cookie handler share the same store
+            services.AddSingleton<SessionStoreDistributed>();
+            services.AddSingleton<ITicketStore>(x => x.GetRequiredService<SessionStoreDistributed>());
+            services.AddSingleton<ISessionRevocationStore>(x => x.GetRequiredService<SessionStoreDistributed>());
+
+            services.AddBlazorServerAccessTokenManagement<TokenStoreDistributed>();
+
+            services.AddDataProtection()
+                .SetApplicationName(valkeyOptions.EffectiveApplicationName)
+                .PersistKeysToStackExchangeRedis(() => connection.Value.GetDatabase(), keys.DataProtectionKeys);
         }
     }
 
     extension(WebApplication app)
     {
-        public async Task UseKeycloakAuthenticationAsync(StartupConfiguration config,
-            CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Map the back-channel logout endpoint, and the JWKS endpoint when signed JWT client authentication is
+        /// configured. Call after <see cref="AddKeycloakAuthentication" />.
+        /// </summary>
+        public void UseKeycloakAuthentication()
         {
-            ValidateConfiguration(config.KeycloakConfiguration);
-
-            if (config.KeycloakConfiguration.CertificatePath is not null)
+            // resolving it here also surfaces an unreadable certificate at startup rather than on first request
+            if (app.Services.GetService<JwksProvider>() is not null)
             {
                 app.MapJwksEndpoint();
             }
 
-            app.MapBackchannelLogoutEndpoint(config.SessionStore);
-
-            if (config.DatabaseOptions is not null)
-            {
-                await app.Services.MigrateDatabaseAsync<DatabaseContext>(cancellationToken);
-            }
+            app.MapBackchannelLogoutEndpoint();
         }
 
         /// <summary>
         /// Map JWKS endpoint for public key discovery. Do not use this if signed JWT authentication isn't used!
         /// </summary>
-        public void MapJwksEndpoint()
+        private void MapJwksEndpoint()
         {
             app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
                 .AllowAnonymous().Produces<JwksResponse>();
         }
 
-        private void MapBackchannelLogoutEndpoint(ITicketStore sessionStoreDb)
+        private void MapBackchannelLogoutEndpoint()
         {
             app.MapPost("/signout-backchannel-oidc",
                 async ([FromForm(Name = "logout_token")] string token, BackchannelLogoutService bls,
-                    CancellationToken cancellationToken) =>
+                    ISessionRevocationStore sessions, CancellationToken cancellationToken) =>
                 {
                     if (string.IsNullOrWhiteSpace(token))
                     {
@@ -235,9 +232,18 @@ public static class OpenIdConnectExtensions
                         return Results.BadRequest("Invalid logout token.");
                     }
 
-                    await sessionStoreDb.RemoveAsync(identity.FindFirst("sid")?.Value
-                                                     ?? throw new InvalidOperationException("no sid claim"),
-                        cancellationToken);
+                    var sub = identity.GetRequiredClaim("sub");
+                    var sid = identity.FindFirst("sid")?.Value;
+
+                    if (sid is null)
+                    {
+                        await sessions.RevokeUserSessionsAsync(sub, cancellationToken);
+                    }
+                    else
+                    {
+                        await sessions.RevokeSessionAsync(sid, cancellationToken);
+                    }
+
                     return Results.Ok();
                 }).AllowAnonymous().DisableAntiforgery().Accepts<string>("application/x-www-form-urlencoded");
         }

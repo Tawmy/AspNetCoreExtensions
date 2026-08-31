@@ -9,9 +9,8 @@
 
     <ItemGroup>
         <PackageReference Include="Duende.AccessTokenManagement.OpenIdConnect" Version="4.2.0"/>
-        <PackageReference Include="EFCore.NamingConventions" Version="10.0.1"/>
-        <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.7"/>
-        <PackageReference Include="Tawmy.AspNetCoreExtensions.EfCore" Version="1.0.0"/>
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.11"/>
+        <PackageReference Include="StackExchange.Redis" Version="3.1.31"/>
         <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0"/>
     </ItemGroup>
 
