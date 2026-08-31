@@ -53,6 +53,7 @@ public static class OpenIdConnectExtensions
             services.AddSingleton<ClientAssertionService>(_ =>
                 new ClientAssertionService(idp.Authority, idp.ClientId, idp.CertificatePath, idp.PrivateKeyPath));
             services.AddTransient<OidcEvents>();
+            services.AddTransient<CookieEvents>();
             services.AddTransient<BackchannelLogoutService>();
 
             if (idp.CertificatePath is not null)
@@ -149,7 +150,7 @@ public static class OpenIdConnectExtensions
                     // if half of cookie lifetime expired, a new one is issued
                     x.SlidingExpiration = true;
 
-                    // TODO refresh token if session extended -> keep Keycloak session alive
+                    x.EventsType = typeof(CookieEvents);
                 });
 
             // attached here rather than in AddCookie, which has no service provider to resolve the store from
