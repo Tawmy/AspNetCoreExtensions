@@ -37,6 +37,14 @@ public record ValkeyOptions
 
     internal string EffectiveApplicationName => ApplicationName ?? KeyPrefix;
 
+    /// <summary>
+    /// Path to the PEM-formatted RSA certificate the data protection key ring is encrypted with.
+    /// </summary>
+    public required string KeyEncryptionCertificatePath { get; init; }
+
+    /// <summary>Path to the PEM-formatted private key for <see cref="KeyEncryptionCertificatePath" />.</summary>
+    public required string KeyEncryptionPrivateKeyPath { get; init; }
+
     /// <summary>Fallback session lifetime, used only when a ticket carries no expiry of its own.</summary>
     public TimeSpan SessionTimeToLive { get; init; } = TimeSpan.FromMinutes(30);
 

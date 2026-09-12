@@ -188,7 +188,8 @@ public static class OpenIdConnectExtensions
 
             services.AddDataProtection()
                 .SetApplicationName(valkeyOptions.EffectiveApplicationName)
-                .PersistKeysToStackExchangeRedis(() => connection.Value.GetDatabase(), keys.DataProtectionKeys);
+                .PersistKeysToStackExchangeRedis(() => connection.Value.GetDatabase(), keys.DataProtectionKeys)
+                .ProtectKeysWithCertificate(KeyEncryptionCertificate.Load(valkeyOptions));
         }
     }
 
