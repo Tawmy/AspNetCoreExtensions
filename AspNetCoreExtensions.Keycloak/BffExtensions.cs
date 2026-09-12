@@ -84,7 +84,10 @@ public static class BffExtensions
                             new AuthenticationHeaderValue("Bearer", accessToken);
                     }
                 });
-            }).RequireAuthorization();
+            }).RequireAuthorization(x => x
+                // name scheme to prevent automatic redirect if unauthenticated -> would break Blazor WASM standalone
+                .AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser());
         }
     }
 }

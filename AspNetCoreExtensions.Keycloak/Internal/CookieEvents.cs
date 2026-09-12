@@ -1,5 +1,7 @@
 using Duende.AccessTokenManagement.OpenIdConnect;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace AspNetCoreExtensions.Keycloak.Internal;
@@ -15,6 +17,35 @@ internal sealed class CookieEvents(IUserTokenManager tokens, ILogger<CookieEvent
     /// request already lives with.
     /// </summary>
     private static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Answer with a status code under the BFF prefix.
+    /// </summary>
+    public override Task RedirectToLogin(RedirectContext<CookieAuthenticationOptions> context)
+    {
+        return RespondWithStatusCode(context, StatusCodes.Status401Unauthorized)
+            ? Task.CompletedTask
+            : base.RedirectToLogin(context);
+    }
+
+    /// <inheritdoc cref="RedirectToLogin" />
+    public override Task RedirectToAccessDenied(RedirectContext<CookieAuthenticationOptions> context)
+    {
+        return RespondWithStatusCode(context, StatusCodes.Status403Forbidden)
+            ? Task.CompletedTask
+            : base.RedirectToAccessDenied(context);
+    }
+
+    private static bool RespondWithStatusCode(RedirectContext<CookieAuthenticationOptions> context, int statusCode)
+    {
+        if (!context.Request.Path.StartsWithSegments(BffExtensions.Prefix))
+        {
+            return false;
+        }
+
+        context.Response.StatusCode = statusCode;
+        return true;
+    }
 
     public override async Task CheckSlidingExpiration(CookieSlidingExpirationContext context)
     {
