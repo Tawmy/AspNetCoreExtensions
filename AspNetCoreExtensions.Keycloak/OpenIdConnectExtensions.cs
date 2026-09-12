@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using StackExchange.Redis;
@@ -197,29 +198,36 @@ public static class OpenIdConnectExtensions
         /// Map the back-channel logout endpoint, and the JWKS endpoint when signed JWT client authentication is
         /// configured. Call after <see cref="AddKeycloakAuthentication" />.
         /// </summary>
-        public void UseKeycloakAuthentication()
+        public IEndpointConventionBuilder UseKeycloakAuthentication()
         {
+            var group = app.MapGroup("");
+
             // resolving it here also surfaces an unreadable certificate at startup rather than on first request
             if (app.Services.GetService<JwksProvider>() is not null)
             {
-                app.MapJwksEndpoint();
+                group.MapJwksEndpoint();
             }
 
-            app.MapBackchannelLogoutEndpoint();
-        }
+            group.MapBackchannelLogoutEndpoint();
 
+            return group;
+        }
+    }
+
+    extension(IEndpointRouteBuilder endpoints)
+    {
         /// <summary>
-        /// Map JWKS endpoint for public key discovery. Do not use this if signed JWT authentication isn't used!
+        /// Map JWKS endpoint for public key discovery.
         /// </summary>
         private void MapJwksEndpoint()
         {
-            app.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
+            endpoints.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
                 .AllowAnonymous().Produces<JwksResponse>();
         }
 
         private void MapBackchannelLogoutEndpoint()
         {
-            app.MapPost("/signout-backchannel-oidc",
+            endpoints.MapPost("/signout-backchannel-oidc",
                 async ([FromForm(Name = "logout_token")] string token, BackchannelLogoutService bls,
                     ISessionRevocationStore sessions, CancellationToken cancellationToken) =>
                 {

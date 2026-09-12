@@ -34,7 +34,7 @@ public static class BlazorRoutingExtensions
     // https://github.com/dotnet/blazor-samples/blob/main/9.0/BlazorWebAppOidcBff/BlazorWebAppOidc/LoginLogoutEndpointRouteBuilderExtensions.cs
     extension(IEndpointRouteBuilder endpoints)
     {
-        public void MapLoginAndLogout(string oidcScheme)
+        public IEndpointConventionBuilder MapLoginAndLogout(string oidcScheme)
         {
             var group = endpoints.MapGroup("");
 
@@ -47,6 +47,8 @@ public static class BlazorRoutingExtensions
             group.MapPost("/logout", ([FromForm] string? returnUrl) => TypedResults.SignOut(
                 GetAuthProperties(returnUrl),
                 [CookieAuthenticationDefaults.AuthenticationScheme, oidcScheme]));
+
+            return group;
         }
     }
 }
