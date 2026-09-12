@@ -64,6 +64,8 @@ public static class OpenIdConnectExtensions
 
             services.AddStores(valkeyOptions);
 
+            services.AddHttpForwarder(); // add forwarders for bff pattern
+
             services.AddAuthentication(x =>
                 {
                     x.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
