@@ -61,6 +61,7 @@ public static class OpenIdConnectExtensions
             {
                 services.AddSingleton<JwksProvider>(_ => new JwksProvider(idp.CertificatePath));
                 services.AddSingleton<ITokenRequestCustomizer, SignedJwtRequestCustomizer>();
+                services.AddSingleton<IClientAssertionService, DuendeClientAssertionService>();
             }
 
             services.AddStores(valkeyOptions);
