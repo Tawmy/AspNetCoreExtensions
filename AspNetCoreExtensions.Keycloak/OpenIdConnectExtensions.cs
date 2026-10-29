@@ -221,7 +221,7 @@ public static class OpenIdConnectExtensions
         /// <summary>
         /// Map JWKS endpoint for public key discovery.
         /// </summary>
-        private void MapJwksEndpoint()
+        public void MapJwksEndpoint()
         {
             endpoints.MapGet("/.well-known/jwks", (JwksProvider jwks) => TypedResults.Ok(jwks.GetJwksResponse()))
                 .AllowAnonymous().Produces<JwksResponse>();
